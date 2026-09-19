@@ -1,8 +1,206 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rizney Music Archive</title>
+  <style>
+    :root {
+      --black: #000;
+      --panel: #120b18;
+      --panel-2: #1d1028;
+      --purple: #c084fc;
+      --bright-purple: #e0aaff;
+      --gold: #d4af37;
+      --bright-gold: #f5d76e;
+      --muted: #b9a8c5;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--purple);
+      background: var(--black);
+      font-family: Georgia, 'Times New Roman', serif;
+    }
+
+    .sticky-player {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(0, 0, 0, .96);
+      border-bottom: 1px solid var(--gold);
+      box-shadow: 0 4px 24px rgba(212, 175, 55, .18);
+    }
+
+    header { padding: 12px 14px 8px; text-align: center; }
+    h1 { margin: 0 0 8px; color: var(--bright-gold); font-size: 1.55rem; letter-spacing: .08em; }
+    .player-wrap { width: 100%; max-width: 720px; margin: auto; aspect-ratio: 16 / 9; background: #090509; }
+    iframe { width: 100%; height: 100%; border: 0; }
+    #now-playing { margin: 8px 0 4px; color: var(--bright-purple); font-size: .95rem; }
+
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 8px 8px 12px; }
+    button, .donate {
+      border: 1px solid var(--gold);
+      border-radius: 999px;
+      padding: 10px 13px;
+      color: #fff;
+      background: #55208a;
+      font: inherit;
+      font-size: .86rem;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    button:hover, .donate:hover { background: #7e35bc; }
+    .donate { background: #8b1e68; }
+
+    main { width: min(100% - 24px, 900px); margin: 0 auto; padding: 18px 0 50px; }
+    .intro { color: var(--muted); text-align: center; line-height: 1.45; }
+    h2 { color: var(--bright-gold); font-size: 1.25rem; border-bottom: 1px solid var(--gold); padding-bottom: 8px; }
+
+    #cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; margin: 12px 0 22px; }
+    .card {
+      min-height: 180px;
+      padding: 12px;
+      color: var(--bright-purple);
+      background: linear-gradient(145deg, #21102e, #090509);
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 2px rgba(212,175,55,.15), 0 0 14px rgba(212,175,55,.13);
+      text-align: center;
+    }
+    .card .symbol { display: block; color: var(--bright-gold); font-size: 2rem; margin-bottom: 8px; }
+    .card strong { display: block; margin-bottom: 12px; font-size: .9rem; }
+    .card a { color: var(--bright-gold); font-size: .8rem; }
+
+    #song-list { display: grid; gap: 8px; }
+    .song {
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      color: var(--purple);
+      background: var(--panel);
+      border: 1px solid #3b1d50;
+      border-radius: 8px;
+    }
+    .song-number { color: var(--gold); text-align: center; }
+    .song-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .song small { display: block; color: var(--muted); font-family: sans-serif; font-size: .7rem; margin-top: 3px; }
+    .play { padding: 7px 10px; font-size: .78rem; }
+    .empty { color: var(--muted); text-align: center; padding: 20px; }
+
+    @media (min-width: 700px) {
+      .sticky-player { padding: 0 18px; }
+      .player-wrap { max-width: 620px; }
+      .song { grid-template-columns: 45px 1fr auto; }
+    }
+  </style>
+</head>
 <body>
+  <section class="sticky-player">
+    <header>
+      <h1>✦ RIZNEY ✦</h1>
+      <div class="player-wrap">
+        <iframe id="player" src="https://www.youtube.com/embed/mkKOtZPLkzY" title="Rizney music video player" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+      </div>
+      <div id="now-playing">Now playing: Song 1</div>
+    </header>
+    <nav class="controls" aria-label="Music controls">
+      <!-- Replace YOUR_VENMO_USERNAME with your real Venmo username. -->
+      <a class="donate" href="https://venmo.com/u/YOUR_VENMO_USERNAME" target="_blank" rel="noopener">♥ Donate with Venmo</a>
+      <button id="random-song">♫ Random Song</button>
+      <button id="draw-cards">✦ Draw 5 Cards</button>
+    </nav>
+  </section>
 
-<h1>Hello World!</h1>
+  <main>
+    <p class="intro">Browse the collection in order, or let the cards choose a song for you.</p>
+    <section id="reading" hidden>
+      <h2>Your Music Reading</h2>
+      <div id="cards"></div>
+    </section>
+    <section>
+      <h2>Chronological Collection</h2>
+      <div id="song-list"></div>
+    </section>
+  </main>
 
+  <script>
+    // This first visual prototype uses the beginning of the supplied collection.
+    // The remaining links can be added here one per line when the layout is approved.
+    const songs = [
+      'https://youtube.com/shorts/mkKOtZPLkzY',
+      'https://youtu.be/K2Dujl_bFZg',
+      'https://youtu.be/9lMRH8Q47KU',
+      'https://youtu.be/_X3lvzQ-LPU',
+      'https://youtu.be/UPrAovWTbPg',
+      'https://youtu.be/eEMpzOWMOss',
+      'https://youtu.be/eaii8UpU3nY',
+      'https://youtu.be/gVx8-14vNyc',
+      'https://youtu.be/S2gfGK3DwJ0',
+      'https://youtu.be/5wlDe0rmGgw',
+      'https://youtu.be/Aa59hZscrYg',
+      'https://youtu.be/na2pWme1cZ4',
+      'https://youtu.be/hv86n3luqpo',
+      'https://youtu.be/sCLUO6SzQtg',
+      'https://youtu.be/lsYUN1hftyw',
+      'https://youtu.be/U8wk5Ed90fk',
+      'https://youtu.be/hh-U98bN3Vc',
+      'https://youtu.be/npayCUDcWoE',
+      'https://youtu.be/GIf2CUNburw',
+      'https://youtu.be/nPzfOkoNiFk',
+      'https://youtu.be/wG7SRL1Do00',
+      'https://youtu.be/OD5x9DY2dzU',
+      'https://youtu.be/1qAKYJo1zRc',
+      'https://youtu.be/mBBU3nAUL94',
+      'https://youtu.be/CAwy7WirHTA',
+      'https://youtu.be/uVDGYtRELas',
+      'https://youtu.be/zb0vUX07fn0',
+      'https://youtu.be/vKmHvqGr2pI',
+      'https://youtube.com/shorts/bcfu5SlUkv8',
+      'https://youtube.com/shorts/-BeapYF5MTs'
+    ];
+
+    const ids = songs.map(url => url.match(/(?:youtu\.be\/|shorts\/|watch\?v=)([^?&/]+)/)?.[1]).filter(Boolean);
+    const player = document.querySelector('#player');
+    const nowPlaying = document.querySelector('#now-playing');
+    const list = document.querySelector('#song-list');
+    const reading = document.querySelector('#reading');
+    const cards = document.querySelector('#cards');
+
+    function titleFor(index) { return `Song ${index + 1}`; }
+    function play(index) {
+      if (!ids[index]) return;
+      player.src = `https://www.youtube.com/embed/${ids[index]}?autoplay=1&rel=0`;
+      nowPlaying.textContent = `Now playing: ${titleFor(index)}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    ids.forEach((id, index) => {
+      const row = document.createElement('article');
+      row.className = 'song';
+      row.innerHTML = `<span class="song-number">${index + 1}</span><span class="song-title">♫ ${titleFor(index)}<small>YouTube video • chronological position ${index + 1}</small></span><button class="play" type="button">Play</button>`;
+      row.querySelector('button').addEventListener('click', () => play(index));
+      list.appendChild(row);
+    });
+
+    document.querySelector('#random-song').addEventListener('click', () => play(Math.floor(Math.random() * ids.length)));
+    document.querySelector('#draw-cards').addEventListener('click', () => {
+      const chosen = [...ids.keys()].sort(() => Math.random() - .5).slice(0, Math.min(5, ids.length));
+      cards.innerHTML = '';
+      chosen.forEach((index, position) => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `<span class="symbol">${['☾','✦','☉','♢','✧'][position]}</span><strong>${titleFor(index)}</strong><a href="#" aria-label="Play ${titleFor(index)}">Reveal &amp; play</a>`;
+        card.querySelector('a').addEventListener('click', event => { event.preventDefault(); play(index); });
+        cards.appendChild(card);
+      });
+      reading.hidden = false;
+      reading.scrollIntoView({ behavior: 'smooth' });
+    });
+  </script>
 </body>
 </html>
