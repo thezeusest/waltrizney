@@ -168,6 +168,19 @@
       background: #7e35bc;
     }
 
+    .skip {
+      min-width: 86px;
+    }
+
+    .skip[disabled] {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    .skip[disabled]:hover {
+      background: #55208a;
+    }
+
     /* ------------------------------
        MAIN CONTENT
     ------------------------------ */
@@ -194,24 +207,19 @@
     }
 
     /* ------------------------------
-       FIVE CARD READING
+       SIX CARD READING
     ------------------------------ */
 
     #cards {
       display: grid;
-
-      grid-template-columns:
-        repeat(auto-fit, minmax(145px, 1fr));
-
-      gap: 12px;
-
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
       margin: 12px 0 22px;
     }
 
     .card {
-      min-height: 180px;
-
-      padding: 12px;
+      min-height: 150px;
+      padding: 9px 6px;
 
       color: var(--bright-purple);
 
@@ -230,26 +238,20 @@
 
     .card .symbol {
       display: block;
-
       color: var(--bright-gold);
-
-      font-size: 2rem;
-
-      margin-bottom: 8px;
+      font-size: 1.7rem;
+      margin-bottom: 6px;
     }
 
     .card strong {
       display: block;
-
-      margin-bottom: 12px;
-
-      font-size: .9rem;
+      margin-bottom: 8px;
+      font-size: .78rem;
     }
 
     .card a {
       color: var(--bright-gold);
-
-      font-size: .8rem;
+      font-size: .7rem;
     }
 
     /* ------------------------------
@@ -357,6 +359,26 @@
         font-size: .75rem;
         padding: 8px 10px;
       }
+
+      .skip {
+        min-width: 0;
+      }
+
+      .card {
+        min-height: 130px;
+      }
+
+      .card .symbol {
+        font-size: 1.45rem;
+      }
+
+      .card strong {
+        font-size: .7rem;
+      }
+
+      .card a {
+        font-size: .65rem;
+      }
     }
   </style>
 </head>
@@ -381,7 +403,7 @@
       ♥ Donate
     </a>
 
-    <h1>✦ RIZNEY ✦</h1>
+    <h1>✦ WALT RIZNEY ✦</h1>
 
     <div class="tagline">
       Mix'N'Mojo
@@ -406,7 +428,7 @@
     </div>
 
     <div id="now-playing">
-      Now playing: Song 1
+      Now playing: Mega MIX'N'MOJO Intro
     </div>
 
   </section>
@@ -419,12 +441,20 @@
 
   <nav class="controls" aria-label="Music controls">
 
+    <button id="previous-song" class="skip" type="button" aria-label="Previous song">
+      « Previous
+    </button>
+
     <button id="random-song" type="button">
-      ♫ Random 
+      ♫ Random
     </button>
 
     <button id="draw-cards" type="button">
-      ✦ Draw 5 Cards
+      ✦ Draw Six
+    </button>
+
+    <button id="next-song" class="skip" type="button" aria-label="Next song">
+      Next »
     </button>
 
   </nav>
@@ -682,6 +712,12 @@
     const cards =
       document.querySelector("#cards");
 
+    const previousButton =
+      document.querySelector("#previous-song");
+
+    const nextButton =
+      document.querySelector("#next-song");
+
 
     /* =========================================================
        PLAYBACK STATE
@@ -694,7 +730,7 @@
     /*
       null = normal chronological mode
 
-      array = five-card playlist mode
+      array = six-card playlist mode
     */
 
     let cardPlaylist = null;
@@ -708,6 +744,19 @@
 
     function titleFor(index) {
       return `Song ${index + 1}`;
+    }
+
+
+    function updateButtons() {
+      previousButton.disabled =
+        cardPlaylist === null
+          ? currentIndex <= 0
+          : cardPosition <= 0;
+
+      nextButton.disabled =
+        cardPlaylist === null
+          ? currentIndex >= ids.length - 1
+          : cardPosition >= cardPlaylist.length - 1;
     }
 
 
@@ -740,10 +789,95 @@
 
       }
 
+      updateButtons();
+
       window.scrollTo({
         top: 0,
         behavior: "smooth"
       });
+    }
+
+
+    function playPlaylistPosition(position) {
+      if (!cardPlaylist || !cardPlaylist[position]) return;
+
+      cardPosition = position;
+      currentIndex = cardPlaylist[position];
+
+      nowPlaying.textContent =
+        `Reading ${position + 1} of 6: ${titleFor(currentIndex)}`;
+
+      if (player) {
+        player.loadVideoById({
+          videoId: ids[currentIndex]
+        });
+      }
+
+      updateButtons();
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+
+
+    function playPrevious() {
+      if (cardPlaylist !== null) {
+        if (cardPosition > 0) {
+          playPlaylistPosition(cardPosition - 1);
+        }
+        return;
+      }
+
+      if (currentIndex > 0) {
+        play(currentIndex - 1);
+      }
+    }
+
+
+    function playNext() {
+
+      /*
+        SIX-CARD MODE
+      */
+
+      if (cardPlaylist !== null) {
+
+        if (cardPosition < cardPlaylist.length - 1) {
+          playPlaylistPosition(cardPosition + 1);
+          return;
+        }
+
+        nowPlaying.textContent =
+          "Music reading complete ✦";
+
+        cardPlaylist = null;
+        cardPosition = 0;
+        updateButtons();
+
+        return;
+      }
+
+
+      /*
+        NORMAL CHRONOLOGICAL MODE
+      */
+
+      const nextIndex = currentIndex + 1;
+
+      if (nextIndex < ids.length) {
+
+        play(nextIndex);
+
+      } else {
+
+        nowPlaying.textContent =
+          "You reached the end of the collection ✦";
+
+      }
+
+      updateButtons();
     }
 
 
@@ -771,6 +905,8 @@
             nowPlaying.textContent =
               `Now playing: ${titleFor(0)}`;
 
+            updateButtons();
+
           },
 
           onStateChange: function (event) {
@@ -796,74 +932,6 @@
       });
 
     };
-
-
-    /* =========================================================
-       AUTOMATIC NEXT SONG
-       ========================================================= */
-
-    function playNext() {
-
-      /*
-        FIVE-CARD MODE
-      */
-
-      if (cardPlaylist !== null) {
-
-        cardPosition++;
-
-        if (cardPosition < cardPlaylist.length) {
-
-          const nextIndex =
-            cardPlaylist[cardPosition];
-
-          currentIndex = nextIndex;
-
-          nowPlaying.textContent =
-            `Reading ${cardPosition + 1} of 5: ${titleFor(nextIndex)}`;
-
-          player.loadVideoById({
-            videoId: ids[nextIndex]
-          });
-
-          return;
-
-        }
-
-        /*
-          The fifth card finished.
-
-          Stop the playlist.
-        */
-
-        nowPlaying.textContent =
-          "Music reading complete ✦";
-
-        cardPlaylist = null;
-        cardPosition = 0;
-
-        return;
-      }
-
-
-      /*
-        NORMAL CHRONOLOGICAL MODE
-      */
-
-      const nextIndex = currentIndex + 1;
-
-      if (nextIndex < ids.length) {
-
-        play(nextIndex);
-
-      } else {
-
-        nowPlaying.textContent =
-          "You reached the end of the collection ✦";
-
-      }
-
-    }
 
 
     /* =========================================================
@@ -904,7 +972,7 @@
 
           /*
             Clicking a normal song
-            exits five-card mode.
+            exits six-card mode.
           */
 
           cardPlaylist = null;
@@ -942,9 +1010,17 @@
 
       });
 
+    document
+      .querySelector("#previous-song")
+      .addEventListener("click", playPrevious);
+
+    document
+      .querySelector("#next-song")
+      .addEventListener("click", playNext);
+
 
     /* =========================================================
-       DRAW FIVE CARDS
+       DRAW SIX CARDS
        ========================================================= */
 
     document
@@ -952,14 +1028,13 @@
       .addEventListener("click", () => {
 
         /*
-          Pick five different songs.
+          Pick six different songs.
         */
 
         const chosen =
           [...ids.keys()]
             .sort(() => Math.random() - 0.5)
-            .slice(0, Math.min(5, ids.length));
-
+            .slice(0, Math.min(6, ids.length));
 
         /*
           Save the exact order.
@@ -969,9 +1044,7 @@
         */
 
         cardPlaylist = chosen;
-
         cardPosition = 0;
-
 
         /*
           Clear previous reading.
@@ -979,10 +1052,7 @@
 
         cards.innerHTML = "";
 
-
-        /*
-          Build the five cards.
-        */
+        const symbols = ["☾", "✦", "☉", "♢", "✧", "✺"];
 
         chosen.forEach((index, position) => {
 
@@ -990,10 +1060,6 @@
             document.createElement("article");
 
           card.className = "card";
-
-          const symbols =
-            ["☾", "✦", "☉", "♢", "✧"];
-
 
           card.innerHTML = `
             <span class="symbol">
@@ -1004,89 +1070,32 @@
               ${titleFor(index)}
             </strong>
 
-            <a
-              href="#"
-              aria-label="Play ${titleFor(index)}"
-            >
+            <a href="#" aria-label="Play ${titleFor(index)}">
               Reveal &amp; play
             </a>
           `;
 
-
           card
             .querySelector("a")
             .addEventListener("click", event => {
-
               event.preventDefault();
-
-              /*
-                Start the five-card reading
-                at whichever card was clicked.
-              */
-
-              cardPosition = position;
-
-              currentIndex = index;
-
-              nowPlaying.textContent =
-                `Reading ${position + 1} of 5: ${titleFor(index)}`;
-
-
-              if (player) {
-
-                player.loadVideoById({
-                  videoId: ids[index]
-                });
-
-              }
-
-              window.scrollTo({
-                top: 0,
-                behavior: "smooth"
-              });
-
+              playPlaylistPosition(position);
             });
-
 
           cards.appendChild(card);
 
         });
 
-
-        /*
-          Show the reading.
-        */
-
         reading.hidden = false;
 
-
-        /*
-          Start Card #1 automatically.
-        */
-
-        if (player && chosen.length > 0) {
-
-          currentIndex = chosen[0];
-
-          nowPlaying.textContent =
-            `Reading 1 of 5: ${titleFor(chosen[0])}`;
-
-          player.loadVideoById({
-            videoId: ids[chosen[0]]
-          });
-
+        if (chosen.length > 0) {
+          playPlaylistPosition(0);
+          reading.scrollIntoView({ behavior: "smooth" });
         }
 
-
-        /*
-          Scroll down to reveal the reading.
-        */
-
-        reading.scrollIntoView({
-          behavior: "smooth"
-        });
-
       });
+
+    updateButtons();
 
   </script>
 
